@@ -6,7 +6,7 @@ import scipy.spatial.distance
 import sys
 
 
-from numba import autojit
+# from numba import autojit
 
 try:
     from time import perf_counter
@@ -137,8 +137,7 @@ def pam(distances,
                 swap_end_t = perf_counter()
                 avg_swap_t += (swap_end_t - swap_start_t)
                 sys.stdout.write('\rswapped {0}-{1} [{2:.4f} secs avg]'.
-                                 format(i, j, avg_swap_t /
-                                        (i * n_instances + j + 1)))
+                                 format(i, j, avg_swap_t / (j + 1)))
                 sys.stdout.flush()
 
         #
