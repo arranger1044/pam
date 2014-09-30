@@ -6,7 +6,7 @@ import scipy.spatial.distance
 import sys
 
 
-# from numba import autojit
+from numba import jit
 
 try:
     from time import perf_counter
@@ -32,6 +32,27 @@ def closest_medoids_cost(distances, medoid_ids):
     """
     closest_ids = numpy.argmin(distances[:, medoid_ids], axis=1)
     return closest_ids, numpy.sum(distances[:, closest_ids])
+
+
+@jit
+def closest_medoids_numba(distances, medoid_ids, clustering):
+    """
+    WRITEME
+    """
+    n_instances = distances.shape[0]
+    tot_cost = 0
+    for i in range(n_instances):
+        best_medoid = i
+        best_cost = INF
+        for j in medoid_ids:
+            cost = distances[i, j]
+            if cost < best_cost:
+                best_cost = cost
+                best_medoid = j
+        tot_cost += cost
+        clustering[i] = best_medoid
+
+    return tot_cost
 
 
 def closest_medoids(distances, points_2_medoids, medoid_ids):
@@ -98,6 +119,7 @@ def pam(distances,
         best_cost = INF
         best_clustering = None
         best_medoid_ids = None
+        best_medoid_ids_vec = None
 
         iter_start_t = perf_counter()
         #
@@ -124,11 +146,16 @@ def pam(distances,
                     medoid_ids_vec[j] = True
 
                     # compute the cost
-                    clustering, cost = closest_medoids_cost(distances,
-                                                            medoid_ids)
+                    # clustering, cost = closest_medoids_cost(distances,
+                    #                                         medoid_ids_vec)
+                    cost = closest_medoids_numba(distances,
+                                                 medoid_ids,
+                                                 clustering)
+
                     if cost < best_cost:
                         best_cost = cost
-                        best_clustering = clustering
+                        best_clustering = numpy.copy(clustering)
+                        best_medoid_ids_vec = numpy.copy(medoid_ids_vec)
                         best_medoid_ids = numpy.where(medoid_ids_vec)
 
                     medoid_ids_vec[i] = True
@@ -144,6 +171,8 @@ def pam(distances,
         # checking for the best clustering
         #
         medoid_ids = best_medoid_ids
+        medoid_ids_vec = best_medoid_ids_vec
+
         if numpy.all(clustering != best_clustering):
             clustering = best_clustering
         else:
