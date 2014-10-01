@@ -142,7 +142,7 @@ def pam(distances,
                     # medoid_ids_cp.remove(medoid_id)
                     # add instance
                     # medoid_ids_cp.add(instance_id)
-                    medoid_ids_vec[i] = False
+                    medoid_ids_vec[medoid_id] = False
                     medoid_ids_vec[j] = True
 
                     # compute the cost
@@ -156,9 +156,9 @@ def pam(distances,
                         best_cost = cost
                         best_clustering = numpy.copy(clustering)
                         best_medoid_ids_vec = numpy.copy(medoid_ids_vec)
-                        best_medoid_ids = numpy.where(medoid_ids_vec)
+                        best_medoid_ids, = numpy.where(medoid_ids_vec)
 
-                    medoid_ids_vec[i] = True
+                    medoid_ids_vec[medoid_id] = True
                     medoid_ids_vec[j] = False
 
                 swap_end_t = perf_counter()
@@ -170,6 +170,7 @@ def pam(distances,
         #
         # checking for the best clustering
         #
+        print('\nmedoidsis', best_medoid_ids)
         medoid_ids = best_medoid_ids
         medoid_ids_vec = best_medoid_ids_vec
 
@@ -187,6 +188,7 @@ def pam(distances,
               format(iter_end_t - iter_start_t,
                      iter + 1,
                      n_iters))
+        iter += 1
 
     return clustering
 
