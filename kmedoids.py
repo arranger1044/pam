@@ -20,17 +20,11 @@ except:
 INF = float('inf')
 
 
-def closest_medoid(distances, point_id, medoid_ids):
-    """
-    WRITEME
-    """
-    return medoid_ids[numpy.argmin(distances[point_id, medoid_ids])]
-
-
 # @autojit
 def closest_medoids_cost(distances, medoid_ids):
     """
-    WRITEME
+    Computing the closest medoids and the cost of the new configuration
+    using numpy
     """
     closest_ids = numpy.argmin(distances[:, medoid_ids], axis=1)
     return closest_ids, numpy.sum(distances[:, closest_ids])
@@ -39,7 +33,8 @@ def closest_medoids_cost(distances, medoid_ids):
 @jit
 def closest_medoids_numba(distances, medoid_ids, clustering):
     """
-    WRITEME
+    Computing the closest medoids and the cost of the new configuration
+    using a simple loop optimized with Numba
     """
     n_instances = distances.shape[0]
     tot_cost = 0
@@ -60,13 +55,18 @@ def closest_medoids_numba(distances, medoid_ids, clustering):
 
 def create_theano_cost_function(distances):
     """
-    WRITEME
+    Creating the function to compute the closest medoids and the cost
+    of that configuration using Theano
     """
     #
     # the distance matrix is a shared var
     #
     D = theano.shared(distances)
     M = theano.tensor.bvector()
+    #
+    # Some tricky stuff here, I am using max_and_argmax to get both
+    # things so I shall use an inverted distance matrix
+    #
     Inf = theano.shared(float('inf'))
     D_meds = theano.tensor.switch(M, -D, -Inf)
     # D_meds = theano.printing.Print('DM')(D_meds_a)
@@ -77,42 +77,29 @@ def create_theano_cost_function(distances):
     return theano.function([M], [-Cost, Idx])
 
 
-def closest_medoids(distances, points_2_medoids, medoid_ids):
+def medoid_assoc_to_clustering(clustering):
     """
     WRITEME
     """
-    medoids_2_instances = [{} for i in range(len(medoid_ids))]
-    for i in range(points_2_medoids):
-        medoid_id = closest_medoid(distances, i, medoid_ids)
-        points_2_medoids[i] = medoid_id
-        medoids_2_instances[medoid_id].add(i)
-    return medoids_2_instances
+    medoids_to_clusters = set(clustering)
 
-
-def closest_medoids_2(distances, points_2_medoids, medoid_ids):
-    """
-    WRITEME
-    """
-    for i in range(points_2_medoids):
-        points_2_medoids[i] = closest_medoid(distances, i, medoid_ids)
-
-
-def total_cost_by_swap(distances, medoid_id):
-    """
-    WRITEME
-    """
-    return numpy.sum(distances[medoid_id, :])
-
+    clustering_assoc = {medoid_id: cluster_id for cluster_id, medoid_id
+                        in enumerate(medoids_to_clusters)}
+    clustering_ids = [clustering_assoc[medoid_id] for medoid_id in clustering]
+    return clustering_ids
 
 # @autojit
+
+
 def pam(distances,
         k,
         n_iters=100,
         delta_cost=1e-5,
         rand_gen=None,
+        medoids_2_clusters=False,
         theano=False):
     """
-    WRITEME
+    Partitioning Around Medoids (PAM) implementation of K-Medoids
     """
     n_instances = distances.shape[0]
     stop = False
@@ -223,25 +210,21 @@ def pam(distances,
                 sys.stdout.flush()
 
         #
-        # checking for the best clustering
+        # checking for the cost as well?
         #
-        # print('\nmedoidsis', curr_best_medoid_ids)
-        # print('\nmedoidsis vec', curr_best_medoid_ids_vec)
         delta_cost = best_cost - curr_best_cost
 
+        #
+        # checking for changes in the clustering scheme
+        #
         if numpy.any(medoid_ids_vec != curr_best_medoid_ids_vec):
             print('\nNew clustering', best_clustering)
             best_clustering = curr_best_clustering
             medoid_ids = curr_best_medoid_ids
             medoid_ids_vec = curr_best_medoid_ids_vec
             best_cost = curr_best_cost
-
         else:
             stop = True
-
-        #
-        # checking for the cost as well?
-        #
 
         iter_end_t = perf_counter()
         print('\n-->Elapsed {0:.4f} secs for iteration {1}/{2} COST:{3}'.
@@ -250,6 +233,14 @@ def pam(distances,
                      n_iters,
                      best_cost))
         iter += 1
+
+    #
+    # translating from medoids to clusters?
+    #
+    print('Best clustering (medoid ids)', best_clustering)
+    if medoids_2_clusters:
+        best_clustering = medoid_assoc_to_clustering(best_clustering)
+        print('Best clustering (cluster ids)', best_clustering)
 
     return best_clustering
 
