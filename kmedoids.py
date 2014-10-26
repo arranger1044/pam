@@ -79,7 +79,8 @@ def create_theano_cost_function(distances):
 
 def medoid_assoc_to_clustering(clustering):
     """
-    WRITEME
+    Converting a clustering by medoid ids into one with sequential ids
+    (starting from 0)
     """
     medoids_to_clusters = set(clustering)
 
@@ -143,11 +144,6 @@ def pam(distances,
 
     while iter < n_iters and not stop:
 
-        # curr_best_cost = INF
-        # curr_best_clustering = None
-        # curr_best_medoid_ids = None
-        # curr_best_medoid_ids_vec = None
-
         iter_start_t = perf_counter()
         #
         # Maximization step
@@ -187,7 +183,7 @@ def pam(distances,
                     else:
                         cost, clustering = closest_medoids_theano(
                             medoid_ids_vec)
-                    # print('\nswap Cost {0} clustering {1} medoids {2} vec {3}'.
+
                     #       format(cost, clustering,
                     #              medoid_ids_cp, medoid_ids_vec))
 
